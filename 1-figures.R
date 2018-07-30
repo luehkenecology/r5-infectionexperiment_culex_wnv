@@ -109,74 +109,37 @@ european_countries2 <- c("BEL", "BGR", "DNK", "DEU", "EST", "FIN","IRL",
 country_shapes_nuts0_list2 <- lapply(1:37, function(x) raster::getData("GADM", country = as.character(european_countries2[x]), level = 0))
 country_shapes_nuts0_all2 <- do.call(rbind, country_shapes_nuts0_list2)
 
-# read nuts shapefile----------------------------------------
+# read nuts shapefile---------- ---------- ---------- ---------- ---------- 
 nuts_all <- readShapeSpatial("data/NUTS_2016_01M_SH/NUTS_RG_01M_2016_4326") # read NUTS shape file
+crs(nuts_all) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" # define projection 
 
-# exclude Turkey
+# exclude Turkey and Iceland---------- ---------- ---------- ---------- ---------- 
 nuts_all <- subset(nuts_all, !(CNTR_CODE %in% c("TR", "IS")))
 
-coords2 <- matrix(c(-13, 35,
-                    -13, 55,
-                    -13, 55,
-                    35, 55,
-                    35, 55,
-                    35, 35,
-                    35, 35,
-                    -13, 35), ncol=2)
-?Polygon
-p1 <- Polygon(coords2)
-p1a <- Polygons(list(p1), ID = "p1a")
-myPolys1 <- SpatialPolygons(list(p1a))
-plot(myPolys1)
-
-
-house1.building <- Polygon(rbind(c(-13, 55), c(35,55), 
-                                 c(35, 35), c(-13, 35)))
-h1 <- Polygons(list(house1.building), "house1")
-houses <- SpatialPolygons(list(h1))
-pi <- intersect(houses, nuts_all)
-
-
-nuts_all2 <- subset(nuts_all, !(NUTS_NAME %in% c("Canarias",
-                                                 "CANARIAS")))
-plot(nuts_all2)
-
-table(nuts_all$NUTS_NAME %in% c("Canarias"))
-
-#
+# select all regions on the NUTS3 level---------- ---------- ---------- ---------- ---------- 
 df <- subset(nuts_all, LEVL_CODE == 3)
+
+# exclude oversea regions (e.g. Guadeloupe)
 df1 <- subset(df, !(NUTS_ID %in% c("PT200", "PT300", "ES703",
                                    "ES704", "ES705", "ES706",
                                    "ES707", "ES708", "ES709",
                                    "FRY10", "FRY20", "FRY30",
                                    "FRY40", "FRY50")))
 
-pdf(file = "dddd3d3dd.pdf",width = 15, height=12)
+kosovo <- raster::getData("GADM", country = "Kosovo", level = 2)
+bih <- raster::getData("GADM", country = "BIH", level = 3)
+
+pdf(file = "dddd3d3dds1.pdf",width = 15, height=12)
 plot(df1)
+plot(ks, add = T)
+plot(bih, add = T)
 dev.off()
-plot(subset(df1, CNTR_CODE == "ME"))
 
-#nuts_all_3 <- subset(nuts_all, STAT_LEVL_ == 3) # only level 0
-#nuts_alldd <- subset()
-#plot(nuts_alldd)
-#nuts_0 <- subset(nuts_all, STAT_LEVL_ == 0) # only level 0
-#crs(nuts_0) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" # define projection 
-crs(nuts_all) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" # define projection 
-#crs(nuts_all_3) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" # define projection 
-
-# mosquito distribution----------------------------------------
-# read data provided by ECDC
+# read data provided by ECDC---------- ---------- ---------- ---------- ---------- 
 invasive_species_distribution <- read.csv("reviewd.csv", sep = ";")
 invasive_species_distribution$year <- do.call(rbind, strsplit(as.character(invasive_species_distribution$First.case.reported), "/"))[,3]
 invasive_species_distribution2 <- invasive_species_distribution[!(is.na(invasive_species_distribution[,4])),]
 
-# only established Aedes albopictus populations
-#invasive_species_distribution_sub <- subset(invasive_species_distribution, vectorspecies == "Aedes_albopictus" & statusDescription == "Established")
-#unique(invasive_species_distribution_sub$country)
-#nuts_all$NUTS_ID
-# select nuts-shapes
-#positive_nuts <- subset(nuts_all, 
-#                        (NUTS_ID %in% c(unique(as.character(invasive_species_distribution_sub$geoID)), "DE12", "DE13")))
 positive_nuts <- lapply(1:length(invasive_species_distribution2$ID), function(x) subset(nuts_all, 
                                                                                         (NUTS_ID %in% c((as.character(invasive_species_distribution2$ID[x]))))))
 
