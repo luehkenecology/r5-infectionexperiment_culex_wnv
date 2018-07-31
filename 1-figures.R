@@ -125,72 +125,93 @@ df1 <- subset(df, !(NUTS_ID %in% c("PT200", "PT300", "ES703",
                                    "ES707", "ES708", "ES709",
                                    "FRY10", "FRY20", "FRY30",
                                    "FRY40", "FRY50")))
+kosovo <- raster::getData("GADM", country = "Kosovo", level = 1)
+bih <- raster::getData("GADM", country = "BIH", level = 2)
+bih2013 <- subset(bih, NAME_2 %in% c("Modrica", "Tuzla"))
+bih2014 <- subset(bih, NAME_1 %in% c("Repuplika Srpska"))
+kosovo2012 <- subset(kosovo, NAME_1 %in% c("Pristina","Gnjilane", "Prizren"))
+greece1014 <- subset(df1, FID %in% c("EL301","EL302",
+                            "EL303","EL304",
+                            "EL305","EL306",
+                            "EL307"))
 
-kosovo <- raster::getData("GADM", country = "Kosovo", level = 2)
-bih <- raster::getData("GADM", country = "BIH", level = 3)
 
-pdf(file = "dddd3d3dds1.pdf",width = 15, height=12)
+pdf(file = "figs/supplementary_map_eu_regions.pdf",width = 15, height=12)
 plot(df1)
-plot(ks, add = T)
+plot(kosovo, add = T)
 plot(bih, add = T)
 dev.off()
 
 # read data provided by ECDC---------- ---------- ---------- ---------- ---------- 
 invasive_species_distribution <- read.csv("reviewd.csv", sep = ";")
+invasive_species_distribution <- invasive_species_distribution[-c(42, 43, 44, 45),]
+sdsdsd <- stack("output/mean_temp_14dpi_18C")
+
 invasive_species_distribution$year <- do.call(rbind, strsplit(as.character(invasive_species_distribution$First.case.reported), "/"))[,3]
 invasive_species_distribution2 <- invasive_species_distribution[!(is.na(invasive_species_distribution[,4])),]
+invasive_species_distribution2 <- subset(invasive_species_distribution2, !(Country %in% c("Turkey")))
+invasive_species_distribution2[39,]
+# select eu regions
+positive_nuts <- lapply(1:length(invasive_species_distribution2$ID), function(x) subset(df1, 
+                                                                                        (FID %in% c((as.character(invasive_species_distribution2$ID[x]))))))
+positive_nuts[39]
+positive_nuts2 <- subset(df1, (NUTS_ID %in% c((as.character(invasive_species_distribution2$ID)))))
 
-positive_nuts <- lapply(1:length(invasive_species_distribution2$ID), function(x) subset(nuts_all, 
-                                                                                        (NUTS_ID %in% c((as.character(invasive_species_distribution2$ID[x]))))))
-
-positive_nuts2 <- subset(nuts_all, (NUTS_ID %in% c((as.character(invasive_species_distribution2$ID)))))
-cbind(invasive_species_distribution2$year,
-      invasive_species_distribution2$ID)
 
 rbPal <- colorRampPalette(c("yellow","red","purple"))
 
-european_countries2
+#cropping_info <- c(-8.99451, 40.22603, 34.56369, 60)
+#sdsdsd2sd <- mask(mean(sdsdsd2sd, na.rm = T), country_shapes_nuts0_all2)
+#cropping_info <- c(-11, 30, 35.8, 60)
+#sdsdsd2sd1 <- crop(mean(sdsdsd, na.rm = T), cropping_info)
+sdsdsd2sd1 <- mask(mean(sdsdsd, na.rm = T), country_shapes_nuts0_all2)
+cropping_info <- c(-11, 30, 35.8, 60)
+sdsdsd2sd2 <- crop(sdsdsd2sd1, cropping_info)
+#sdsdsd2sd1 <- crop(sdsdsd2sd1, positive_nuts2)
+kosovo_plus <- crop(mean(sdsdsd, na.rm = T), kosovo)
 
-sdsdsd <- stack("output/mean_temp_14dpi_18C")
-cropping_info <- c(-8.99451, 40.22603, 34.56369, 60)
-sdsdsd2sd <- mask(mean(sdsdsd2sd, na.rm = T), country_shapes_nuts0_all2)
-cropping_info <- c(-13, 30, 34.56369, 60)
-sdsdsd2sd1 <- crop(mean(sdsdsd, na.rm = T), cropping_info)
+sdsdsd2sd2[is.na((sdsdsd2sd2))] <- max(getValues(sdsdsd2sd2), na.rm = T)+30
+sdsdsd2sd3 <- mask(sdsdsd2sd2, country_shapes_nuts0_all2)
+plot(subset(positive_nuts2, CNTR_CODE == "EL")[5,], add = T)
 
-jet_pal
-library(scales)
-plot(is.na(sdsdsd2sd1))
-pdf(file = "map22ss2s42d.pdf",width = 5, height=4)
-plot(sdsdsd2sd1, breaks = c(5, 10, 15, 20, 25, 30), col = c("green",rbPal(4)))
-plot(country_shapes_nuts0_all, border = "gray", add = T, col = NA)
-plot(positive_nuts2, add = T)
+plot(subset(positive_nuts2, CNTR_CODE == "TR"))
+positive_nuts2_plot <- subset(positive_nuts2, !(CNTR_CODE %in% "CY"))
+pdf(file = "figs/map13.pdf",width = 4.5, height=3.9)
+par(mar=c(5, 2, 4, 6) + 0.1)
+plot(sdsdsd2sd3, breaks = c(5, 10, 15, 20, 25, 36, 60), col = c("green",rbPal(4), "gray"), legend = F)
+plot(kosovo_plus, breaks = c(5, 10, 15, 20, 25, 36, 60), col = c("green",rbPal(4), "gray"), add = T, legend = F)
+plot(country_shapes_nuts0_all2, border = "gray", add = T, col = NA)
+plot(positive_nuts2_plot, add = T)
+plot(bih2013, add = T)
+plot(bih2014, add = T)
+plot(kosovo2012, add = T)
+plot(greece1014, add = T)
+legend("right",inset=c(-0.7,0), legend = c("NA", "0-5",
+                          ">5-10",
+                          ">10-15",
+                          ">20-25",
+                          ">25","","","","WNV circulation"),horiz = F,  xpd = TRUE, 
+       bty = "n",cex = 1, bg = "white", 
+       border = c("black","black","black","black","black","black","white","white","white","black"),
+       fill = c("gray","green",rbPal(4), "white", "white","white","white"))
 dev.off()
 
 
-all <- lapply(1:7, function(y) lapply(1:2017, function(x) mean(unlist(extract(sdsdsd[[y]], nuts_all[x,])), na.rm = T)))
-all2 <- data.frame(weight = unlist(all))
-pdf(file = "n_2.pdf",width = 5, height=4)
-ggplot(all2, aes(x=weight)) + 
-  geom_histogram(binwidth=0.3, fill = "gray", color = "black") +
-  scale_y_continuous(expand = c(0,0), limits = c(0, 900)) +
-  #scale_x_continuous(limits = c(17.5, 28.5))+
-  xlab("Temperature (°C)") +
-  ylab("Count") +
-  theme_bw()
-dev.off()
+all_all <- lapply(1:7, function(y) lapply(1:1425, function(x) mean(unlist(extract(sdsdsd[[y]], df1[x,])), na.rm = T)))
+all_bih <- lapply(1:7, function(y) lapply(1:15, function(x) mean(unlist(extract(sdsdsd[[y]], bih[x,])), na.rm = T)))
+all_kosovo <- lapply(1:7, function(y) lapply(1:7, function(x) mean(unlist(extract(sdsdsd[[y]], kosovo[x,])), na.rm = T)))
 
-
-#subset(nuts_all, 
-#       (NUTS_ID %in% c((as.character(invasive_species_distribution2$ID)))))
+all2 <- data.frame(weight = c(unlist(all_all),
+                              unlist(all_bih),
+                              unlist(all_kosovo)))
 
 years <- 2011:2017
-mm <- lapply(1:7, function(g) lapply(1:390, function(x) mean(unlist(extract(sdsdsd[[g]], positive_nuts[[x]])), na.rm = T)))
-mm <- lapply(1:7, function(x) mm[[x]][invasive_species_distribution2$year == years[x]])
+invasive_species_distribution2[39,]
+mm <- lapply(1:7, function(g) lapply(1:381, function(x) mean(unlist(extract(sdsdsd[[g]], positive_nuts[[x]])), na.rm = T)))
+#mm <- lapply(1:7, function(x) mm[[x]][invasive_species_distribution2$year == years[x]])
 mm2 <- lapply(1:7, function(x) invasive_species_distribution2[invasive_species_distribution2$year == years[x],]$Total)
-
-
 df <- data.frame(weight = rep(unlist(mm), unlist(mm2)))
-library(ggplot2)
+
 p2 <- ggplot(df, aes(x=weight)) + 
   geom_histogram(binwidth=0.3, fill = "gray", color = "black") +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 420)) +
@@ -204,7 +225,7 @@ AA$groupp = "European regions"
 BB <- df
 BB$groupp = "WNV cases"
 fddddd <- rbind(AA, BB)
-unique(fddddd$groupp)
+
 pdd3 <- ggplot(fddddd, aes(x= weight, group = as.factor(groupp), 
                            alpha = groupp, fill = as.factor(groupp))) + 
   geom_histogram(binwidth=0.3, position="identity", color = "black")+
@@ -220,7 +241,7 @@ pdd3 <- ggplot(fddddd, aes(x= weight, group = as.factor(groupp),
   guides(alpha=FALSE)+
   theme(text = element_text(size = 15))
 library(cowplot)
-pdf(file = "EINS432111111fdq211.pdf",width = 7, height=8.5)
+pdf(file = "figs/EINS432111111fdq211.pdf",width = 7, height=8.5)
 ggdraw(plot_grid(plot_grid(p1a, pdd3, ncol=1, align='v')))
 dev.off()
 
@@ -238,7 +259,7 @@ all <- ggplot(fddddd, aes(x= weight, group = as.factor(groupp),
   guides(alpha=FALSE)+
   theme(text = element_text(size = 15))
 
-pdf(file = "all1.pdf",width = 7, height=4.25)
+pdf(file = "figs/all2.pdf",width = 7, height=4.25)
 all
 dev.off()
 
